@@ -88,69 +88,37 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
         onPanStart: (DragStartDetails details) {
           final center =
               Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
-          final radius = (widget.trackDiameter / 2);
-          final trackOffset = Offset(
-              center.dx + widget.handleRadius, center.dy + widget.handleRadius);
+          final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
 
-          final handleOffset = Offset(
-            center.dx + widget.handleRadius + radius * math.cos(_angle),
-            center.dy + widget.handleRadius + radius * math.sin(_angle),
-          );
-          final isOnHandle = _isPointOnHandle(
-              details.localPosition, handleOffset, widget.handleRadius);
-          final isOnTrack = _isPointOnTrack(details.localPosition, trackOffset,
-              widget.trackDiameter / 2, widget.trackStroke);
-
-          if (isOnHandle || isOnTrack) {
+          final distanceToCenter = (details.localPosition - center).distance;
+          if (distanceToCenter <= radius) {
             setState(() {
               _shouldTrack = true;
             });
           }
-
-          // dev.log('$handleOffset',
-          //     name: '_CircularRangeFinderState - onPanStart:handleOffset ');
-          // dev.log('${details.localPosition}',
-          //     name: 'onPanStart:  details.localPosition');
-          // dev.log('$center', name: 'onPanStart:  center');
-          // dev.log('$radius', name: 'onPanStart:  radius');
-          // dev.log(
-          //     '${_isPointOnHandle(details.localPosition, handleOffset, widget.handleRadius)}',
-          //     name: 'onPanStart:  _isPointOnHandle');
-          // dev.log(
-          //     '${_isPointOnTrack(details.localPosition, trackOffset, widget.trackDiameter / 2, widget.trackStroke)}',
-          //     name: 'onPanStart:  _isPointOnTrack');
         },
         onPanUpdate: (DragUpdateDetails details) {
+          if (!_shouldTrack) return;
+
           final center =
               Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
-          final radius = (widget.trackDiameter / 2);
-          final trackOffset = Offset(
-              center.dx + widget.handleRadius, center.dy + widget.handleRadius);
+          final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
 
-          final handleOffset = Offset(
-            center.dx + widget.handleRadius + radius * math.cos(_angle),
-            center.dy + widget.handleRadius + radius * math.sin(_angle),
-          );
-          final isOnHandle = _isPointOnHandle(
-              details.localPosition, handleOffset, widget.handleRadius);
-          final isOnTrack = _isPointOnTrack(details.localPosition, trackOffset,
-              widget.trackDiameter / 2, widget.trackStroke);
+          // Calculate the angle between the center and the touch point
+          final dx = details.localPosition.dx - center.dx;
+          final dy = details.localPosition.dy - center.dy;
+          final newAngle = math.atan2(dy, dx);
 
-          if (!isOnHandle && !isOnTrack) {
-            setState(() {
-              _shouldTrack = false;
-            });
-            return;
-          }
+          // Constrain the angle to the track
+          final constrainedAngle = newAngle.clamp(-math.pi, math.pi);
 
-          double angleDelta =
-              details.delta.direction / 10; // Adjust sensitivity as needed
-          double newAngle = (_angle + angleDelta) %
-              (2 * math.pi); // Ensure angle stays within 0 to 2*pi range
-
-          // Update the state with the new angle
           setState(() {
-            _angle = newAngle;
+            _angle = constrainedAngle;
+          });
+        },
+        onPanEnd: (DragEndDetails details) {
+          setState(() {
+            _shouldTrack = false;
           });
         },
         child: Stack(
@@ -218,11 +186,10 @@ class CircularRangeSliderHandlePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2);
-    dev.log('$size', name: 'CircularRangeSliderHandlePainter : size');
+
     final handlePaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    dev.log('$angle', name: 'CircularRangeSliderHandlePainter : angle');
 
     final handleOffset = Offset(
       center.dx + radius * math.cos(angle),
