@@ -43,7 +43,7 @@ class CircularRangeFinder extends StatefulWidget {
 
 class _CircularRangeFinderState extends State<CircularRangeFinder> {
   double _angle = math.pi * 1.5;
-  bool _shouldTrack = false;
+  bool _shouldPan = false;
 
   bool isPointInsideCircle(Offset circleCenter, double radius, Offset point) {
     final distance = math.sqrt(math.pow(point.dx - circleCenter.dx, 2) +
@@ -60,57 +60,30 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onPanStart: (DragStartDetails details) {
+          // Center of the actual GesturedDetector
           final center = Offset(wrapperSize / 2, wrapperSize / 2);
 
-          final radius = wrapperSize / 2;
+          // Radius of the canvas.
+          final radius = (wrapperSize / 2) - widget.handleRadius;
 
-          final distanceToCenter = (details.localPosition - center).distance;
           final handleOffset = Offset(
-            center.dx + (radius - widget.handleRadius) * math.cos(_angle),
-            center.dy + (radius - widget.handleRadius) * math.sin(_angle),
+            center.dx + (radius) * math.cos(_angle),
+            center.dy + (radius) * math.sin(_angle),
           );
 
-          dev.log(
-              '${isPointInsideCircle(handleOffset, widget.handleRadius, details.localPosition)}',
-              name: 'onPanStart: isPointInsideCircle');
-
-          // dev.log('$radius', name: 'onPanStart: radius');
-
-          // dev.log('$center', name: 'onPanStart: center');
-          dev.log('${details.localPosition}',
-              name: 'onPanStart: details.localPosition');
-          // dev.log('$_shouldTrack', name: 'onPanStart : _shouldTrack');
-          // dev.log('$_angle', name: 'onPanStart : _angle');
-          // dev.log('$distanceToCenter', name: 'onPanStart : distanceToCenter');
-          dev.log('$handleOffset', name: 'onPanStart : handleOffset');
-
-          // if (distanceToCenter <= radius) {
-          //   setState(() {
-          //     _shouldTrack = true;
-          //     dev.log('$_shouldTrack',
-          //         name: 'onPanStart : _shouldTrack after setstate');
-          //     dev.log('$_angle',
-          //         name: 'onPanStart : _shouldTrack after _angle');
-          //   });
-          // }
           if (isPointInsideCircle(
               handleOffset, widget.handleRadius, details.localPosition)) {
             setState(() {
-              _shouldTrack = true;
-              dev.log('$_shouldTrack',
-                  name: 'onPanStart : _shouldTrack after setstate');
-              dev.log('$_angle',
-                  name: 'onPanStart : _shouldTrack after _angle');
+              _shouldPan = true;
             });
           }
+          // _logOnPanStart(details, center, radius, handleOffset);
         },
         onPanUpdate: (DragUpdateDetails details) {
-          dev.log('$_shouldTrack', name: 'onPanUpdate : _shouldTrack');
-          if (!_shouldTrack) return;
+          if (!_shouldPan) return;
 
           final center =
               Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
-          // final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
 
           // Calculate the angle between the center and the touch point
           final dx = details.localPosition.dx - center.dx;
@@ -118,22 +91,15 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           final newAngle = math.atan2(dy, dx);
 
           // Constrain the angle to the track
-          final constrainedAngle = newAngle.clamp(-math.pi, math.pi);
-          dev.log('$_angle', name: 'onPanUpdate : _angle');
-
+          // final constrainedAngle = newAngle.clamp(-math.pi, math.pi);
+          // _logOnPanUpdate(details, dx, dy, newAngle, constrainedAngle);
           setState(() {
-            _angle = constrainedAngle;
-            dev.log('$_angle', name: 'onPanUpdate : _angle after setState');
+            _angle = newAngle;
           });
         },
         onPanEnd: (DragEndDetails details) {
-          dev.log('$_shouldTrack', name: 'onPanEnd : _shouldTrack');
-          dev.log('$_angle', name: 'onPanEnd : _angle');
           setState(() {
-            _shouldTrack = false;
-            dev.log('$_shouldTrack',
-                name: 'onPanEnd : _shouldTrack after setState');
-            dev.log('$_angle', name: 'onPanEnd : _angle after setState');
+            _shouldPan = false;
           });
         },
         child: Stack(
@@ -155,6 +121,38 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
             ]),
       ),
     );
+  }
+
+  // helper logging method for onPanStart.
+  // ignore: unused_element
+  void _logOnPanStart(DragStartDetails details, Offset center, double radius,
+      Offset handleOffset) {
+    dev.log(
+        '${isPointInsideCircle(handleOffset, widget.handleRadius, details.localPosition)}',
+        name: 'onPanStart: isPointInsideCircle');
+    dev.log('$handleOffset', name: 'onPanStart : handleOffset');
+    dev.log('${details.localPosition}',
+        name: 'onPanStart: details.localPosition');
+    dev.log('$_shouldPan', name: 'onPanStart : _shouldPan');
+    dev.log('$_angle', name: 'onPanStart : _angle');
+    dev.log('$radius', name: 'onPanStart: radius');
+    dev.log('$center', name: 'onPanStart: center');
+  }
+
+  // helper logging method for onPanUpdate.
+  // ignore: unused_element
+  void _logOnPanUpdate(
+    DragUpdateDetails details,
+    double dx,
+    double dy,
+    double newAngle,
+  ) {
+    dev.log('${details.localPosition}',
+        name: 'onPanUpdate: details.localPosition');
+    dev.log('$dx', name: 'onPanUpdate: dx');
+    dev.log('$dy', name: 'onPanUpdate: dy');
+    dev.log('$newAngle', name: 'onPanUpdate: newAngle');
+    // dev.log('$constrainedAngle', name: 'onPanUpdate: constrainedAngle');
   }
 }
 
