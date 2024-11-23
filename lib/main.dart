@@ -45,6 +45,12 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
   double _angle = math.pi * 1.5;
   bool _shouldTrack = false;
 
+  bool isPointInsideCircle(Offset circleCenter, double radius, Offset point) {
+    final distance = math.sqrt(math.pow(point.dx - circleCenter.dx, 2) +
+        math.pow(point.dy - circleCenter.dy, 2));
+    return distance <= radius;
+  }
+
   @override
   Widget build(BuildContext context) {
     final wrapperSize = widget.trackDiameter + (widget.handleRadius * 2);
@@ -59,15 +65,36 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           final radius = wrapperSize / 2;
 
           final distanceToCenter = (details.localPosition - center).distance;
-          dev.log('$radius', name: 'onPanStart: radius');
+          final handleOffset = Offset(
+            center.dx + (radius - widget.handleRadius) * math.cos(_angle),
+            center.dy + (radius - widget.handleRadius) * math.sin(_angle),
+          );
 
-          dev.log('$center', name: 'onPanStart: center');
+          dev.log(
+              '${isPointInsideCircle(handleOffset, widget.handleRadius, details.localPosition)}',
+              name: 'onPanStart: isPointInsideCircle');
+
+          // dev.log('$radius', name: 'onPanStart: radius');
+
+          // dev.log('$center', name: 'onPanStart: center');
           dev.log('${details.localPosition}',
               name: 'onPanStart: details.localPosition');
-          dev.log('$_shouldTrack', name: 'onPanStart : _shouldTrack');
-          dev.log('$_angle', name: 'onPanStart : _angle');
-          dev.log('$distanceToCenter', name: 'onPanStart : distanceToCenter');
-          if (distanceToCenter <= radius) {
+          // dev.log('$_shouldTrack', name: 'onPanStart : _shouldTrack');
+          // dev.log('$_angle', name: 'onPanStart : _angle');
+          // dev.log('$distanceToCenter', name: 'onPanStart : distanceToCenter');
+          dev.log('$handleOffset', name: 'onPanStart : handleOffset');
+
+          // if (distanceToCenter <= radius) {
+          //   setState(() {
+          //     _shouldTrack = true;
+          //     dev.log('$_shouldTrack',
+          //         name: 'onPanStart : _shouldTrack after setstate');
+          //     dev.log('$_angle',
+          //         name: 'onPanStart : _shouldTrack after _angle');
+          //   });
+          // }
+          if (isPointInsideCircle(
+              handleOffset, widget.handleRadius, details.localPosition)) {
             setState(() {
               _shouldTrack = true;
               dev.log('$_shouldTrack',
