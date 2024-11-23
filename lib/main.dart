@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 void main() {
-  // debugPaintSizeEnabled = true;
+  debugPaintSizeEnabled = true;
   // debugCheckIntrinsicSizes = true;
   runApp(const MainApp());
 }
@@ -45,38 +45,6 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
   double _angle = math.pi * 1.5;
   bool _shouldTrack = false;
 
-  bool _isPointOnHandle(Offset point, Offset center, double radius) {
-    final dx = point.dx - center.dx;
-    final dy = point.dy - center.dy;
-    final distance = math.sqrt(dx * dx + dy * dy);
-    return distance <= radius;
-  }
-
-  bool _isPointOnTrack(
-      Offset localPosition, Offset center, double radius, double strokeWidth) {
-    final distanceToCenter = (localPosition - center).distance;
-
-    // If the point is too far or too close, it's definitely not on the stroke
-    if (distanceToCenter > radius + strokeWidth / 2 ||
-        distanceToCenter < radius - strokeWidth / 2) {
-      return false;
-    }
-
-    // Calculate the closest point on the circumference
-    final angle =
-        math.atan2(localPosition.dy - center.dy, localPosition.dx - center.dx);
-    final closestPointOnCircumference = Offset(
-      center.dx + radius * math.cos(angle),
-      center.dy + radius * math.sin(angle),
-    );
-
-    // Calculate the distance between the point and the closest point on the circumference
-    final distanceToCircumference =
-        (localPosition - closestPointOnCircumference).distance;
-
-    return distanceToCircumference <= strokeWidth / 2;
-  }
-
   @override
   Widget build(BuildContext context) {
     final wrapperSize = widget.trackDiameter + (widget.handleRadius * 2);
@@ -86,23 +54,36 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onPanStart: (DragStartDetails details) {
-          final center =
-              Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
-          final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
+          final center = Offset(wrapperSize / 2, wrapperSize / 2);
+
+          final radius = wrapperSize / 2;
 
           final distanceToCenter = (details.localPosition - center).distance;
+          dev.log('$radius', name: 'onPanStart: radius');
+
+          dev.log('$center', name: 'onPanStart: center');
+          dev.log('${details.localPosition}',
+              name: 'onPanStart: details.localPosition');
+          dev.log('$_shouldTrack', name: 'onPanStart : _shouldTrack');
+          dev.log('$_angle', name: 'onPanStart : _angle');
+          dev.log('$distanceToCenter', name: 'onPanStart : distanceToCenter');
           if (distanceToCenter <= radius) {
             setState(() {
               _shouldTrack = true;
+              dev.log('$_shouldTrack',
+                  name: 'onPanStart : _shouldTrack after setstate');
+              dev.log('$_angle',
+                  name: 'onPanStart : _shouldTrack after _angle');
             });
           }
         },
         onPanUpdate: (DragUpdateDetails details) {
+          dev.log('$_shouldTrack', name: 'onPanUpdate : _shouldTrack');
           if (!_shouldTrack) return;
 
           final center =
               Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
-          final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
+          // final radius = (widget.trackDiameter / 2) - widget.trackStroke / 2;
 
           // Calculate the angle between the center and the touch point
           final dx = details.localPosition.dx - center.dx;
@@ -111,14 +92,21 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
 
           // Constrain the angle to the track
           final constrainedAngle = newAngle.clamp(-math.pi, math.pi);
+          dev.log('$_angle', name: 'onPanUpdate : _angle');
 
           setState(() {
             _angle = constrainedAngle;
+            dev.log('$_angle', name: 'onPanUpdate : _angle after setState');
           });
         },
         onPanEnd: (DragEndDetails details) {
+          dev.log('$_shouldTrack', name: 'onPanEnd : _shouldTrack');
+          dev.log('$_angle', name: 'onPanEnd : _angle');
           setState(() {
             _shouldTrack = false;
+            dev.log('$_shouldTrack',
+                name: 'onPanEnd : _shouldTrack after setState');
+            dev.log('$_angle', name: 'onPanEnd : _angle after setState');
           });
         },
         child: Stack(
@@ -166,6 +154,7 @@ class CircularRangeSliderTrackPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Outline
+
     canvas.drawCircle(center, radius, circularTrackPaint);
   }
 
@@ -198,6 +187,9 @@ class CircularRangeSliderHandlePainter extends CustomPainter {
 
     // handle
     canvas.drawCircle(handleOffset, handleRadius, handlePaint);
+    dev.log('$size', name: 'CircularRangeSliderHandlePainter: size');
+    dev.log('$radius', name: 'CircularRangeSliderHandlePainter: radius');
+    dev.log('$center', name: 'CircularRangeSliderHandlePainter: center');
 
     dev.log('$handleOffset',
         name: 'CircularRangeSliderHandlePainter handleOffsets');
@@ -205,7 +197,6 @@ class CircularRangeSliderHandlePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CircularRangeSliderHandlePainter oldDelegate) {
-    dev.log('${oldDelegate.angle} : $angle', name: 'oldDelegate.delta : delta');
     return oldDelegate.angle != angle;
   }
 }
@@ -241,26 +232,26 @@ RotationDirection panHandler(DragUpdateDetails d, double radius) {
   final rotationalChange = verticalRotation + horizontalRotation;
 
   final movingClockwise = rotationalChange > 0;
-  final movingCounterClockwise = rotationalChange < 0;
+  // final movingCounterClockwise = rotationalChange < 0;
 
-  dev.log('onTop: $onTop', name: '_panHandler');
-  dev.log('onLeftSide: $onLeftSide', name: '_panHandler');
-  dev.log('onRightSide: $onRightSide', name: '_panHandler');
-  dev.log('onBottom: $onBottom', name: '_panHandler');
-  dev.log('panUp: $panUp', name: '_panHandler');
-  dev.log('panLeft: $panLeft', name: '_panHandler');
-  dev.log('panRight: $panRight', name: '_panHandler');
-  dev.log('panDown: $panDown', name: '_panHandler');
-  dev.log('yChange: $yChange', name: '_panHandler');
-  dev.log('xChange: $xChange', name: '_panHandler');
-  dev.log('verticalRotation: $verticalRotation', name: '_panHandler');
-  dev.log('horizontalRotation: $horizontalRotation', name: '_panHandler');
-  dev.log('rotationalChange: $rotationalChange', name: '_panHandler');
-  dev.log('movingClockwise: $movingClockwise', name: '_panHandler');
-  dev.log(
-    'movingCounterClockwise: $movingCounterClockwise',
-    name: '_panHandler',
-  );
+  // dev.log('onTop: $onTop', name: '_panHandler');
+  // dev.log('onLeftSide: $onLeftSide', name: '_panHandler');
+  // dev.log('onRightSide: $onRightSide', name: '_panHandler');
+  // dev.log('onBottom: $onBottom', name: '_panHandler');
+  // dev.log('panUp: $panUp', name: '_panHandler');
+  // dev.log('panLeft: $panLeft', name: '_panHandler');
+  // dev.log('panRight: $panRight', name: '_panHandler');
+  // dev.log('panDown: $panDown', name: '_panHandler');
+  // dev.log('yChange: $yChange', name: '_panHandler');
+  // dev.log('xChange: $xChange', name: '_panHandler');
+  // dev.log('verticalRotation: $verticalRotation', name: '_panHandler');
+  // dev.log('horizontalRotation: $horizontalRotation', name: '_panHandler');
+  // dev.log('rotationalChange: $rotationalChange', name: '_panHandler');
+  // dev.log('movingClockwise: $movingClockwise', name: '_panHandler');
+  // dev.log(
+  //   'movingCounterClockwise: $movingCounterClockwise',
+  //   name: '_panHandler',
+  // );
 
   if (movingClockwise == true) {
     return RotationDirection.clockwise;
