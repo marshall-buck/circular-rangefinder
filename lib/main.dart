@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-import 'dart:developer' as dev;
-
 import 'package:circular_rangefinder/circular_range_finder.dart';
 import 'package:flutter/material.dart';
 
