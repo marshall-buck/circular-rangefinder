@@ -1,6 +1,6 @@
 {
-    "name": "test_rotate",
-    "short_name": "test_rotate",
+    "name": "circular_rangefinder",
+    "short_name": "circular_rangefinder",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

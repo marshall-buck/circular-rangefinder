@@ -2,11 +2,8 @@ import 'dart:math' as math;
 import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 void main() {
-  debugPaintSizeEnabled = true;
-  // debugCheckIntrinsicSizes = true;
   runApp(const MainApp());
 }
 
@@ -20,7 +17,10 @@ class MainApp extends StatelessWidget {
       backgroundColor: Colors.black45,
       body: Center(
         child: CircularRangeFinder(
-            trackStroke: 12, handleRadius: 36, trackDiameter: 300),
+          trackStroke: 12,
+          handleRadius: 36,
+          trackDiameter: 300,
+        ),
       ),
     ));
   }
@@ -45,7 +45,7 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
   double _angle = math.pi * 1.5;
   bool _shouldPan = false;
 
-  bool isPointInsideCircle(Offset circleCenter, double radius, Offset point) {
+  bool isPointInsideHandle(Offset circleCenter, double radius, Offset point) {
     final distance = math.sqrt(math.pow(point.dx - circleCenter.dx, 2) +
         math.pow(point.dy - circleCenter.dy, 2));
     return distance <= radius;
@@ -71,7 +71,7 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
             center.dy + (radius) * math.sin(_angle),
           );
 
-          if (isPointInsideCircle(
+          if (isPointInsideHandle(
               handleOffset, widget.handleRadius, details.localPosition)) {
             setState(() {
               _shouldPan = true;
@@ -85,14 +85,10 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           final center =
               Offset(widget.trackDiameter / 2, widget.trackDiameter / 2);
 
-          // Calculate the angle between the center and the touch point
           final dx = details.localPosition.dx - center.dx;
           final dy = details.localPosition.dy - center.dy;
           final newAngle = math.atan2(dy, dx);
 
-          // Constrain the angle to the track
-          // final constrainedAngle = newAngle.clamp(-math.pi, math.pi);
-          // _logOnPanUpdate(details, dx, dy, newAngle, constrainedAngle);
           setState(() {
             _angle = newAngle;
           });
@@ -128,7 +124,7 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
   void _logOnPanStart(DragStartDetails details, Offset center, double radius,
       Offset handleOffset) {
     dev.log(
-        '${isPointInsideCircle(handleOffset, widget.handleRadius, details.localPosition)}',
+        '${isPointInsideHandle(handleOffset, widget.handleRadius, details.localPosition)}',
         name: 'onPanStart: isPointInsideCircle');
     dev.log('$handleOffset', name: 'onPanStart : handleOffset');
     dev.log('${details.localPosition}',
@@ -157,7 +153,7 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
 }
 
 class CircularRangeSliderTrackPainter extends CustomPainter {
-  CircularRangeSliderTrackPainter(
+  const CircularRangeSliderTrackPainter(
       {required this.color, required this.trackStroke});
 
   final Color color;
@@ -167,20 +163,16 @@ class CircularRangeSliderTrackPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-
-    dev.log('$size', name: 'CircularRangeSliderTrackPainter: size');
-    dev.log('$radius', name: 'CircularRangeSliderTrackPainter: radius');
-    dev.log('$center', name: 'CircularRangeSliderTrackPainter: center');
-
-    // Draw the stroke
     final circularTrackPaint = Paint()
       ..color = color
       ..strokeWidth = trackStroke
       ..style = PaintingStyle.stroke;
 
-    // Outline
-
     canvas.drawCircle(center, radius, circularTrackPaint);
+
+    // dev.log('$size', name: 'CircularRangeSliderTrackPainter: size');
+    // dev.log('$radius', name: 'CircularRangeSliderTrackPainter: radius');
+    // dev.log('$center', name: 'CircularRangeSliderTrackPainter: center');
   }
 
   @override
@@ -190,7 +182,7 @@ class CircularRangeSliderTrackPainter extends CustomPainter {
 }
 
 class CircularRangeSliderHandlePainter extends CustomPainter {
-  CircularRangeSliderHandlePainter(
+  const CircularRangeSliderHandlePainter(
       {required this.angle, required this.color, required this.handleRadius});
   final double angle;
   final Color color;
@@ -212,18 +204,18 @@ class CircularRangeSliderHandlePainter extends CustomPainter {
 
     // handle
     canvas.drawCircle(handleOffset, handleRadius, handlePaint);
-    dev.log('$size', name: 'CircularRangeSliderHandlePainter: size');
-    dev.log('$radius', name: 'CircularRangeSliderHandlePainter: radius');
-    dev.log('$center', name: 'CircularRangeSliderHandlePainter: center');
-
-    dev.log('$handleOffset',
-        name: 'CircularRangeSliderHandlePainter handleOffsets');
   }
 
   @override
   bool shouldRepaint(CircularRangeSliderHandlePainter oldDelegate) {
     return oldDelegate.angle != angle;
   }
+  // dev.log('$size', name: 'CircularRangeSliderHandlePainter: size');
+  // dev.log('$radius', name: 'CircularRangeSliderHandlePainter: radius');
+  // dev.log('$center', name: 'CircularRangeSliderHandlePainter: center');
+
+  // dev.log('$handleOffset',
+  //     name: 'CircularRangeSliderHandlePainter handleOffsets');
 }
 
 enum RotationDirection { clockwise, counterclockwise }
