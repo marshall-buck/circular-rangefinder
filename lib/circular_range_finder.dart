@@ -2,28 +2,46 @@ import 'dart:developer' as dev;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-class CircularRangeFinder extends StatefulWidget {
-  const CircularRangeFinder(
-      {super.key,
-      required this.trackStroke,
-      required this.handleRadius,
-      required this.trackDiameter});
+enum RotationDirection { clockwise, counterclockwise }
+
+// TODO:use speed indicator icons to adjust speed.
+class CircularRangeSlider extends StatefulWidget {
+  const CircularRangeSlider({
+    required this.trackStroke,
+    required this.handleRadius,
+    required this.trackDiameter,
+    required this.trackColor,
+    required this.handleColor,
+    this.id,
+    this.child,
+    this.onPanUpdate,
+    this.logging = false,
+    super.key,
+  });
 
   final double trackStroke;
   final double handleRadius;
   final double trackDiameter;
+  final Color trackColor;
+  final Color handleColor;
+  final Widget? child;
+  final int? id;
+  final void Function(RotationDirection)? onPanUpdate;
+  final bool logging;
 
   @override
-  State<CircularRangeFinder> createState() => _CircularRangeFinderState();
+  State<CircularRangeSlider> createState() => _CircularRangeSliderState();
 }
 
-class _CircularRangeFinderState extends State<CircularRangeFinder> {
+class _CircularRangeSliderState extends State<CircularRangeSlider> {
   double _angle = math.pi * 1.5;
   bool _shouldPan = false;
 
-  bool isPointInsideHandle(Offset circleCenter, double radius, Offset point) {
-    final distance = math.sqrt(math.pow(point.dx - circleCenter.dx, 2) +
-        math.pow(point.dy - circleCenter.dy, 2));
+  bool _isPointInsideHandle(Offset circleCenter, double radius, Offset point) {
+    final distance = math.sqrt(
+      math.pow(point.dx - circleCenter.dx, 2) +
+          math.pow(point.dy - circleCenter.dy, 2),
+    );
     return distance <= radius;
   }
 
@@ -43,17 +61,22 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           final radius = (wrapperSize / 2) - widget.handleRadius;
 
           final handleOffset = Offset(
-            center.dx + (radius) * math.cos(_angle),
-            center.dy + (radius) * math.sin(_angle),
+            center.dx + radius * math.cos(_angle),
+            center.dy + radius * math.sin(_angle),
           );
 
-          if (isPointInsideHandle(
-              handleOffset, widget.handleRadius, details.localPosition)) {
+          if (_isPointInsideHandle(
+            handleOffset,
+            widget.handleRadius,
+            details.localPosition,
+          )) {
             setState(() {
               _shouldPan = true;
             });
           }
-          // _logOnPanStart(details, center, radius, handleOffset);
+          if (widget.logging) {
+            _logOnPanStart(details, center, radius, handleOffset);
+          }
         },
         onPanUpdate: (DragUpdateDetails details) {
           if (!_shouldPan) return;
@@ -65,6 +88,15 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           final dy = details.localPosition.dy - center.dy;
           final newAngle = math.atan2(dy, dx);
 
+          final direction = panHandler(details, widget.trackDiameter / 2);
+          if (widget.onPanUpdate != null) {
+            widget.onPanUpdate!(direction);
+          }
+
+          if (widget.logging) {
+            _logOnPanUpdate(details, dx, dy, newAngle);
+          }
+
           setState(() {
             _angle = newAngle;
           });
@@ -75,36 +107,49 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
           });
         },
         child: Stack(
-            //
-            alignment: Alignment.center,
-            children: [
-              CustomPaint(
-                size: Size.square(widget.trackDiameter),
-                painter: CircularRangeSliderTrackPainter(
-                    color: Colors.cyan, trackStroke: widget.trackStroke),
-              ),
-              CustomPaint(
-                size: Size.square(widget.trackDiameter),
-                painter: CircularRangeSliderHandlePainter(
-                    angle: _angle,
-                    color: Colors.cyan,
-                    handleRadius: widget.handleRadius),
-              )
-            ]),
+          //
+          alignment: Alignment.center,
+          children: [
+            CustomPaint(
+              size: Size.square(widget.trackDiameter),
+              painter: _CircularRangeSliderTrackPainter(
+                  color: widget.trackColor,
+                  trackStroke: widget.trackStroke,
+                  logging: widget.logging),
+            ),
+            CustomPaint(
+              size: Size.square(widget.trackDiameter),
+              painter: _CircularRangeSliderHandlePainter(
+                  angle: _angle,
+                  color: widget.handleColor,
+                  handleRadius: widget.handleRadius,
+                  logging: widget.logging),
+            ),
+            if (widget.child != null) widget.child!,
+          ],
+        ),
       ),
     );
   }
 
-  // helper logging method for onPanStart.
-  // ignore: unused_element
-  void _logOnPanStart(DragStartDetails details, Offset center, double radius,
-      Offset handleOffset) {
+  /// helper logging method for onPanStart.
+
+  void _logOnPanStart(
+    DragStartDetails details,
+    Offset center,
+    double radius,
+    Offset handleOffset,
+  ) {
     dev.log(
-        '${isPointInsideHandle(handleOffset, widget.handleRadius, details.localPosition)}',
-        name: 'onPanStart: isPointInsideCircle');
+      // ignore: lines_longer_than_80_chars
+      '${_isPointInsideHandle(handleOffset, widget.handleRadius, details.localPosition)}',
+      name: 'onPanStart: isPointInsideCircle',
+    );
     dev.log('$handleOffset', name: 'onPanStart : handleOffset');
-    dev.log('${details.localPosition}',
-        name: 'onPanStart: details.localPosition');
+    dev.log(
+      '${details.localPosition}',
+      name: 'onPanStart: details.localPosition',
+    );
     dev.log('$_shouldPan', name: 'onPanStart : _shouldPan');
     dev.log('$_angle', name: 'onPanStart : _angle');
     dev.log('$radius', name: 'onPanStart: radius');
@@ -112,28 +157,30 @@ class _CircularRangeFinderState extends State<CircularRangeFinder> {
   }
 
   // helper logging method for onPanUpdate.
-  // ignore: unused_element
+
   void _logOnPanUpdate(
     DragUpdateDetails details,
     double dx,
     double dy,
     double newAngle,
   ) {
-    dev.log('${details.localPosition}',
-        name: 'onPanUpdate: details.localPosition');
+    dev.log(
+      '${details.localPosition}',
+      name: 'onPanUpdate: details.localPosition',
+    );
     dev.log('$dx', name: 'onPanUpdate: dx');
     dev.log('$dy', name: 'onPanUpdate: dy');
     dev.log('$newAngle', name: 'onPanUpdate: newAngle');
-    // dev.log('$constrainedAngle', name: 'onPanUpdate: constrainedAngle');
   }
 }
 
-class CircularRangeSliderTrackPainter extends CustomPainter {
-  const CircularRangeSliderTrackPainter(
-      {required this.color, required this.trackStroke});
+class _CircularRangeSliderTrackPainter extends CustomPainter {
+  const _CircularRangeSliderTrackPainter(
+      {required this.color, required this.trackStroke, required this.logging});
 
   final Color color;
   final double trackStroke;
+  final bool logging;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -146,55 +193,61 @@ class CircularRangeSliderTrackPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, circularTrackPaint);
 
-    // dev.log('$size', name: 'CircularRangeSliderTrackPainter: size');
-    // dev.log('$radius', name: 'CircularRangeSliderTrackPainter: radius');
-    // dev.log('$center', name: 'CircularRangeSliderTrackPainter: center');
+    if (logging) {
+      dev.log('$size', name: 'CircularRangeSliderTrackPainter: size');
+      dev.log('$radius', name: 'CircularRangeSliderTrackPainter: radius');
+      dev.log('$center', name: 'CircularRangeSliderTrackPainter: center');
+      dev.log('$trackStroke',
+          name: 'CircularRangeSliderTrackPainter: trackStroke');
+    }
   }
 
   @override
-  bool shouldRepaint(CircularRangeSliderTrackPainter oldDelegate) {
+  bool shouldRepaint(_CircularRangeSliderTrackPainter oldDelegate) {
     return false;
   }
 }
 
-class CircularRangeSliderHandlePainter extends CustomPainter {
-  const CircularRangeSliderHandlePainter(
-      {required this.angle, required this.color, required this.handleRadius});
+class _CircularRangeSliderHandlePainter extends CustomPainter {
+  const _CircularRangeSliderHandlePainter(
+      {required this.angle,
+      required this.color,
+      required this.handleRadius,
+      required this.logging});
   final double angle;
   final Color color;
   final double handleRadius;
+  final bool logging;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2);
+    final radius = size.width / 2;
 
     final handlePaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
-    final handleOffset = Offset(
+    final offset = Offset(
       center.dx + radius * math.cos(angle),
       center.dy + radius * math.sin(angle),
     );
 
     // handle
-    canvas.drawCircle(handleOffset, handleRadius, handlePaint);
+    canvas.drawCircle(offset, handleRadius, handlePaint);
+    if (logging) {
+      dev.log('$size', name: 'CircularRangeSliderTrackPainter: size');
+      dev.log('$radius', name: 'CircularRangeSliderTrackPainter: radius');
+      dev.log('$center', name: 'CircularRangeSliderTrackPainter: center');
+      dev.log('$offset', name: 'CircularRangeSliderTrackPainter: offset');
+    }
   }
 
   @override
-  bool shouldRepaint(CircularRangeSliderHandlePainter oldDelegate) {
+  bool shouldRepaint(_CircularRangeSliderHandlePainter oldDelegate) {
     return oldDelegate.angle != angle;
   }
-  // dev.log('$size', name: 'CircularRangeSliderHandlePainter: size');
-  // dev.log('$radius', name: 'CircularRangeSliderHandlePainter: radius');
-  // dev.log('$center', name: 'CircularRangeSliderHandlePainter: center');
-
-  // dev.log('$handleOffset',
-  //     name: 'CircularRangeSliderHandlePainter handleOffsets');
 }
-
-enum RotationDirection { clockwise, counterclockwise }
 
 RotationDirection panHandler(DragUpdateDetails d, double radius) {
   /// Location of the pointer

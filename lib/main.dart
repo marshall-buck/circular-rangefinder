@@ -8,16 +8,30 @@ void main() {
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
+  // void onPan(RotationDirection direction) {
+  //   print(direction);
+  // }
+
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
         home: Scaffold(
       backgroundColor: Colors.black45,
       body: Center(
-        child: CircularRangeFinder(
+        child: CircularRangeSlider(
           trackStroke: 12,
-          handleRadius: 36,
-          trackDiameter: 300,
+          handleRadius: 6,
+          trackDiameter: 150,
+          trackColor: Colors.orangeAccent,
+          handleColor: Colors.redAccent,
+          id: 10,
+          onPanUpdate: (direction) {
+            print(direction);
+          },
+          child: const Text(
+            'data',
+            style: TextStyle(color: Colors.amber),
+          ),
         ),
       ),
     ));
